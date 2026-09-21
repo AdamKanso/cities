@@ -186,7 +186,7 @@ def _add_accessibility_areas(
         },
         tooltip=folium.GeoJsonTooltip(
             fields=["name", "accessibility", "nearest_hospital_km"],
-            aliases=["Area", "Accessibility", "Nearest hospital (km)"],
+            aliases=["Area", "Accessibility", "Nearest selected facility (km)"],
             localize=True,
             sticky=False,
         ),
