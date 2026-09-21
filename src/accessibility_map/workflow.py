@@ -11,6 +11,7 @@ import pandas as pd
 from accessibility_map.analysis import (
     AccessibilityThresholds,
     TravelTimeThresholds,
+    apply_travel_time_multiplier,
     attach_accessibility_classes,
     attach_priority_scores,
     attach_residential_density,
@@ -50,6 +51,7 @@ def run_analysis(
     time_thresholds: TravelTimeThresholds,
     straight_line: bool = False,
     minimum_residential_coverage: float = 5,
+    travel_time_multiplier: float = 1.0,
     reporter: Callable[[str], None] | None = None,
 ) -> AnalysisResult:
     """Run hospital-only and hospitals-plus-clinics accessibility scenarios."""
@@ -105,6 +107,19 @@ def run_analysis(
         graph,
         area_points,
         facilities_with_clinics,
+    )
+    if travel_time_multiplier > 1:
+        _report(
+            reporter,
+            "Applying the emergency response-time disruption scenario...",
+        )
+    travel_times = apply_travel_time_multiplier(
+        travel_times,
+        travel_time_multiplier,
+    )
+    travel_times_with_clinics = apply_travel_time_multiplier(
+        travel_times_with_clinics,
+        travel_time_multiplier,
     )
 
     _report(reporter, "Classifying accessibility...")
