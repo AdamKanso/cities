@@ -57,19 +57,19 @@ def nearest_hospital_by_network(
         return [None for _ in range(len(origins))]
 
     graph_crs = graph.graph.get("crs")
-    origins_wgs84 = origins.to_crs(graph_crs)
-    hospitals_wgs84 = hospitals.to_crs(graph_crs)
+    origins_wgs84 = representative_points(origins).to_crs(graph_crs)
+    hospitals_wgs84 = representative_points(hospitals).to_crs(graph_crs)
 
-    hospital_nodes = ox.distance.nearest_nodes(
+    hospital_nodes = list(ox.distance.nearest_nodes(
         graph,
         X=hospitals_wgs84.geometry.x,
         Y=hospitals_wgs84.geometry.y,
-    )
-    origin_nodes = ox.distance.nearest_nodes(
+    ))
+    origin_nodes = list(ox.distance.nearest_nodes(
         graph,
         X=origins_wgs84.geometry.x,
         Y=origins_wgs84.geometry.y,
-    )
+    ))
 
     try:
         lengths = nx.multi_source_dijkstra_path_length(
