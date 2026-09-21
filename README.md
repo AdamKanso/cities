@@ -12,8 +12,10 @@ Which residential areas have poor access to hospitals?
 
 - Download city boundary, hospitals, roads, and neighborhood or residential area data from OpenStreetMap.
 - Build a drivable road network with OSMnx.
-- Estimate travel distance from each residential area centroid to the nearest hospital.
-- Classify each area into accessibility classes.
+- Estimate road-network distance and driving time from each residential area to the nearest hospital.
+- Classify each area using both distance and travel-time thresholds.
+- Measure residential land-use coverage within every analysis area as a population-density proxy.
+- Rank areas by their travel-time access need and relative residential coverage.
 - Display the result on an interactive Folium web map.
 
 ## Setup
@@ -56,6 +58,12 @@ python -m pip install -e .
 python -m accessibility_map --place "Milan, Italy" --output outputs/milan_accessibility.html
 ```
 
+Optional thresholds can be changed for a sensitivity analysis:
+
+```powershell
+python -m accessibility_map --place "Milan, Italy" --good-time-threshold 10 --medium-time-threshold 20
+```
+
 4. Run the tests.
 
 ```powershell
@@ -84,9 +92,10 @@ Open the generated HTML file in a browser.
 The map shows:
 
 - Hospitals as red markers.
-- Residential or neighborhood areas colored by accessibility.
+- A distance-accessibility layer and an estimated driving-time accessibility layer.
+- A residential access priority layer that highlights areas with poor travel-time access and greater residential coverage.
 - A simplified road layer.
-- Popups with estimated distance to the nearest hospital.
+- Tooltips with distance, estimated driving time, residential coverage, and priority score.
 
 ## Notes
 
@@ -99,5 +108,5 @@ OpenStreetMap data quality varies by city. If named neighborhood polygons are sp
 3. Data source: OpenStreetMap hospitals, roads, and residential or neighborhood polygons.
 4. Method: city boundary download, residential area extraction, nearest hospital distance, classification thresholds, and Folium map visualization.
 5. Results: describe which areas appear good, medium, or poor.
-6. Limitations: OSM completeness, travel distance instead of live travel time, and simplified threshold choices.
-7. Possible improvements: public transport, walking routes, population weighting, and emergency response times.
+6. Limitations: OSM completeness, estimated rather than live travel time, residential land use as a population proxy, and simplified threshold choices.
+7. Possible improvements: public transport, census population weighting, hospital capacity, and emergency response times.
