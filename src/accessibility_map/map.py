@@ -28,9 +28,19 @@ def build_map(
     fmap = folium.Map(
         location=[center.y, center.x],
         zoom_start=12,
-        tiles="OpenStreetMap",
+        tiles=None,
         control_scale=True,
     )
+    folium.TileLayer(
+        tiles=(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/"
+            "World_Street_Map/MapServer/tile/{z}/{y}/{x}"
+        ),
+        attr="Tiles &copy; Esri",
+        name="Street map",
+        overlay=False,
+        control=True,
+    ).add_to(fmap)
 
     _add_boundary(fmap, boundary)
     _add_roads(fmap, graph)
