@@ -18,6 +18,7 @@ CITIES = {
     "Brussels": "Brussels, Belgium",
     "Paris": "Paris, France",
 }
+ANALYSIS_VERSION = "grid-cells-v2"
 
 
 st.set_page_config(
@@ -36,8 +37,10 @@ def load_analysis(
     time_good: int,
     time_medium: int,
     travel_time_multiplier: float,
+    analysis_version: str,
 ) -> AnalysisResult:
     """Cache the expensive OSM download and routing calculation per setting set."""
+    del analysis_version
     return run_analysis(
         place,
         AccessibilityThresholds(good_m=distance_good, medium_m=distance_medium),
@@ -126,6 +129,7 @@ def main() -> None:
             time_good,
             time_medium,
             travel_time_multiplier,
+            ANALYSIS_VERSION,
         )
 
     display_areas = (
