@@ -27,7 +27,10 @@ PRIORITY_COLORS = {
 def build_map(
     boundary: gpd.GeoDataFrame,
     areas: gpd.GeoDataFrame,
+    areas_with_clinics: gpd.GeoDataFrame,
+    excluded_areas: gpd.GeoDataFrame,
     hospitals: gpd.GeoDataFrame,
+    clinics: gpd.GeoDataFrame,
     graph,
 ) -> folium.Map:
     """Build an interactive accessibility map."""
@@ -51,10 +54,30 @@ def build_map(
 
     _add_boundary(fmap, boundary)
     _add_roads(fmap, graph)
-    _add_accessibility_areas(fmap, areas)
-    _add_travel_time_areas(fmap, areas)
-    _add_priority_areas(fmap, areas)
+    _add_excluded_areas(fmap, excluded_areas)
+    _add_accessibility_areas(fmap, areas, "Distance: hospitals only", True)
+    _add_accessibility_areas(
+        fmap,
+        areas_with_clinics,
+        "Distance: hospitals + clinics",
+        False,
+    )
+    _add_travel_time_areas(fmap, areas, "Driving time: hospitals only", False)
+    _add_travel_time_areas(
+        fmap,
+        areas_with_clinics,
+        "Driving time: hospitals + clinics",
+        False,
+    )
+    _add_priority_areas(fmap, areas, "Priority: hospitals only", False)
+    _add_priority_areas(
+        fmap,
+        areas_with_clinics,
+        "Priority: hospitals + clinics",
+        False,
+    )
     _add_hospitals(fmap, hospitals)
+    _add_clinics(fmap, clinics)
     _add_legend(fmap)
     folium.LayerControl(collapsed=False).add_to(fmap)
     return fmap
@@ -96,13 +119,43 @@ def _add_roads(fmap: folium.Map, graph) -> None:
     road_layer.add_to(fmap)
 
 
-def _add_accessibility_areas(fmap: folium.Map, areas: gpd.GeoDataFrame) -> None:
+def _add_excluded_areas(fmap: folium.Map, areas: gpd.GeoDataFrame) -> None:
+    """Show grid cells excluded because they lack enough residential land use."""
+    if areas.empty:
+        return
+    display = areas.copy()
+    display["analysis_status"] = "Not analysed"
+    display["exclusion_reason"] = "Residential land-use coverage below 5%"
+    excluded_layer = folium.FeatureGroup(name="Excluded low-residential cells", show=True)
+    folium.GeoJson(
+        display,
+        style_function=lambda _: {
+            "fillColor": "#94a3b8",
+            "color": "#64748b",
+            "weight": 0.7,
+            "fillOpacity": 0.25,
+        },
+        tooltip=folium.GeoJsonTooltip(
+            fields=["name", "analysis_status", "exclusion_reason"],
+            aliases=["Area", "Status", "Reason"],
+            sticky=False,
+        ),
+    ).add_to(excluded_layer)
+    excluded_layer.add_to(fmap)
+
+
+def _add_accessibility_areas(
+    fmap: folium.Map,
+    areas: gpd.GeoDataFrame,
+    layer_name: str,
+    show: bool,
+) -> None:
     display = areas.copy()
     display["nearest_hospital_km"] = display["nearest_hospital_m"].apply(
         lambda value: round(value / 1000, 2) if value is not None else None
     )
 
-    distance_layer = folium.FeatureGroup(name="Distance accessibility", show=True)
+    distance_layer = folium.FeatureGroup(name=layer_name, show=show)
     folium.GeoJson(
         display,
         style_function=lambda feature: {
@@ -124,12 +177,17 @@ def _add_accessibility_areas(fmap: folium.Map, areas: gpd.GeoDataFrame) -> None:
     distance_layer.add_to(fmap)
 
 
-def _add_travel_time_areas(fmap: folium.Map, areas: gpd.GeoDataFrame) -> None:
+def _add_travel_time_areas(
+    fmap: folium.Map,
+    areas: gpd.GeoDataFrame,
+    layer_name: str,
+    show: bool,
+) -> None:
     """Add a toggleable layer for estimated driving-time accessibility."""
     display = areas.copy()
     travel_time_layer = folium.FeatureGroup(
-        name="Estimated driving-time accessibility",
-        show=False,
+        name=layer_name,
+        show=show,
     )
     folium.GeoJson(
         display,
@@ -152,11 +210,16 @@ def _add_travel_time_areas(fmap: folium.Map, areas: gpd.GeoDataFrame) -> None:
     travel_time_layer.add_to(fmap)
 
 
-def _add_priority_areas(fmap: folium.Map, areas: gpd.GeoDataFrame) -> None:
+def _add_priority_areas(
+    fmap: folium.Map,
+    areas: gpd.GeoDataFrame,
+    layer_name: str,
+    show: bool,
+) -> None:
     """Add a toggleable layer identifying higher-priority underserved areas."""
     priority_layer = folium.FeatureGroup(
-        name="Residential access priority",
-        show=False,
+        name=layer_name,
+        show=show,
     )
     folium.GeoJson(
         areas,
@@ -207,6 +270,23 @@ def _add_hospitals(fmap: folium.Map, hospitals: gpd.GeoDataFrame) -> None:
     hospital_layer.add_to(fmap)
 
 
+def _add_clinics(fmap: folium.Map, clinics: gpd.GeoDataFrame) -> None:
+    """Add clinics as a toggleable comparison layer."""
+    clinic_layer = folium.FeatureGroup(name="Clinics", show=False)
+    for _, clinic in clinics.to_crs("EPSG:4326").iterrows():
+        point = clinic.geometry.centroid
+        folium.CircleMarker(
+            location=[point.y, point.x],
+            radius=4,
+            color="#6d28d9",
+            fill=True,
+            fill_color="#8b5cf6",
+            fill_opacity=0.85,
+            popup=clinic.get("name", "Clinic"),
+        ).add_to(clinic_layer)
+    clinic_layer.add_to(fmap)
+
+
 def _add_legend(fmap: folium.Map) -> None:
     legend_html = """
     <div style="
@@ -250,3 +330,22 @@ def _add_legend(fmap: folium.Map) -> None:
     </div>
     """
     fmap.get_root().html.add_child(folium.Element(priority_legend_html))
+    excluded_legend_html = """
+    <div style="
+        position: fixed;
+        bottom: 174px;
+        left: 28px;
+        z-index: 9999;
+        background: white;
+        padding: 10px 12px;
+        border: 1px solid #cbd5e1;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+        font-size: 13px;
+        line-height: 1.5;
+    ">
+        <strong>Grey grid cells</strong><br>
+        Not analysed because residential<br>
+        land-use coverage is below 5%.
+    </div>
+    """
+    fmap.get_root().html.add_child(folium.Element(excluded_legend_html))

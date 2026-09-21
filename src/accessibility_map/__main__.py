@@ -5,6 +5,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import geopandas as gpd
+import pandas as pd
+
 from accessibility_map.analysis import (
     AccessibilityThresholds,
     TravelTimeThresholds,
@@ -21,6 +24,7 @@ from accessibility_map.analysis import (
 from accessibility_map.map import build_map, save_map
 from accessibility_map.osm_data import (
     download_candidate_areas,
+    download_clinics,
     download_city_boundary,
     download_hospitals,
     download_residential_landuse,
@@ -90,14 +94,24 @@ def main() -> None:
 
     print("Downloading hospitals...")
     hospitals = download_hospitals(args.place)
+    print("Downloading clinics for comparison...")
+    clinics = download_clinics(args.place)
+    facilities_with_clinics = gpd.GeoDataFrame(
+        pd.concat([hospitals, clinics], ignore_index=True),
+        geometry="geometry",
+        crs="EPSG:4326",
+    )
 
     print("Creating regular city analysis grid...")
-    areas = download_candidate_areas(args.place, boundary)
+    all_areas = download_candidate_areas(args.place, boundary)
 
     print("Downloading residential land-use coverage...")
     residential_landuse = download_residential_landuse(args.place, boundary)
-    areas = attach_residential_density(areas, residential_landuse)
-    areas = filter_residential_areas(areas)
+    all_areas = attach_residential_density(all_areas, residential_landuse)
+    excluded_areas = all_areas[
+        all_areas["residential_coverage_percent"] < 5
+    ].copy()
+    areas = filter_residential_areas(all_areas)
     print(f"Analysing {len(areas)} residential grid cells...")
     area_points = representative_points(areas)
 
@@ -107,12 +121,28 @@ def main() -> None:
     if args.straight_line:
         print("Calculating straight-line distance to nearest hospital...")
         distances = nearest_hospital_by_straight_line(area_points, hospitals)
+        distances_with_clinics = nearest_hospital_by_straight_line(
+            area_points,
+            facilities_with_clinics,
+        )
     else:
         print("Calculating road-network distance to nearest hospital...")
         distances = nearest_hospital_by_network(graph, area_points, hospitals)
+        print("Calculating distance with clinics included...")
+        distances_with_clinics = nearest_hospital_by_network(
+            graph,
+            area_points,
+            facilities_with_clinics,
+        )
 
     print("Calculating estimated driving time to nearest hospital...")
     travel_times = nearest_hospital_travel_time_by_network(graph, area_points, hospitals)
+    print("Calculating driving time with clinics included...")
+    travel_times_with_clinics = nearest_hospital_travel_time_by_network(
+        graph,
+        area_points,
+        facilities_with_clinics,
+    )
 
     print("Classifying accessibility...")
     classified_areas = attach_accessibility_classes(areas, distances, thresholds)
@@ -122,9 +152,30 @@ def main() -> None:
         time_thresholds,
     )
     classified_areas = attach_priority_scores(classified_areas)
+    classified_areas_with_clinics = attach_accessibility_classes(
+        areas,
+        distances_with_clinics,
+        thresholds,
+    )
+    classified_areas_with_clinics = attach_travel_time_classes(
+        classified_areas_with_clinics,
+        travel_times_with_clinics,
+        time_thresholds,
+    )
+    classified_areas_with_clinics = attach_priority_scores(
+        classified_areas_with_clinics
+    )
 
     print("Building interactive map...")
-    fmap = build_map(boundary, classified_areas, hospitals, graph)
+    fmap = build_map(
+        boundary,
+        classified_areas,
+        classified_areas_with_clinics,
+        excluded_areas,
+        hospitals,
+        clinics,
+        graph,
+    )
     output_path = save_map(fmap, Path(args.output))
     print(f"Saved map to {output_path.resolve()}")
 
