@@ -95,6 +95,9 @@ The map shows:
 - Hospitals as red markers.
 - A distance-accessibility layer and an estimated driving-time accessibility layer.
 - A residential access priority layer that highlights areas with poor travel-time access and greater residential coverage.
+- Hospitals-only and hospitals-plus-clinics comparison layers, selectable from the top-right map control.
+- A toggleable clinic marker layer to inspect the added facilities.
+- Grey grid cells for places not analysed because residential land-use coverage is below 5%.
 - A simplified road layer.
 - Tooltips with distance, estimated driving time, residential coverage, and priority score.
 
@@ -103,6 +106,10 @@ The map shows:
 OpenStreetMap data quality varies by city. Residential land-use coverage is used to identify the grid cells most relevant to the analysis.
 
 The default thresholds are 0.75 km and 1.5 km for distance, and 5 and 10 minutes for estimated driving time. They can be changed through the command-line options for sensitivity analysis.
+
+## Comparing Clinics
+
+The top-right layer control contains hospitals-only layers and hospitals-plus-clinics layers. Turn off the active hospitals-only layer, then turn on the matching hospitals-plus-clinics layer to compare how clinic availability changes the result. The `Clinics` layer shows the clinic locations in purple.
 
 ## Suggested Report Structure
 
