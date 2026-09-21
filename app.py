@@ -1,4 +1,4 @@
-"""Streamlit interface for the Milan hospital accessibility analysis."""
+"""Streamlit interface for multi-city hospital accessibility analysis."""
 
 from __future__ import annotations
 
@@ -16,11 +16,12 @@ CITIES = {
     "Zurich": "Zurich, Switzerland",
     "Brussels": "Brussels, Belgium",
     "Paris": "Paris, France",
+    "Beirut": "Beirut, Lebanon",
 }
 
 
 st.set_page_config(
-    page_title="Milan Hospital Accessibility",
+    page_title="Emergency Healthcare Access",
     page_icon="M",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -34,12 +35,14 @@ def load_analysis(
     distance_medium: int,
     time_good: int,
     time_medium: int,
+    travel_time_multiplier: float,
 ) -> AnalysisResult:
     """Cache the expensive OSM download and routing calculation per setting set."""
     return run_analysis(
         place,
         AccessibilityThresholds(good_m=distance_good, medium_m=distance_medium),
         TravelTimeThresholds(good_minutes=time_good, medium_minutes=time_medium),
+        travel_time_multiplier=travel_time_multiplier,
     )
 
 
@@ -79,6 +82,18 @@ def main() -> None:
         st.subheader("Driving-time thresholds")
         time_good = st.slider("Good access up to (min)", 2, 15, 5, 1)
         time_medium = st.slider("Medium access up to (min)", 3, 30, 10, 1)
+        st.subheader("Emergency response scenario")
+        travel_time_multiplier = st.slider(
+            "Travel-time disruption factor",
+            min_value=1.0,
+            max_value=3.0,
+            value=1.0,
+            step=0.1,
+            help=(
+                "Multiplies estimated road-network travel time to explore delayed "
+                "movement. It is not live traffic, road-closure, or verified conflict data."
+            ),
+        )
         if st.button("Refresh OpenStreetMap data", use_container_width=True):
             load_analysis.clear()
             st.rerun()
@@ -90,8 +105,18 @@ def main() -> None:
         st.error("The medium driving-time threshold must be greater than the good threshold.")
         return
 
-    st.title(f"{city_name} Hospital Accessibility")
-    st.caption("Residential grid analysis using OpenStreetMap road, hospital, clinic, and land-use data.")
+    if city_name == "Beirut":
+        st.title("Beirut Emergency Healthcare Access")
+        st.caption(
+            "Scenario analysis of estimated emergency response time under mobility "
+            "disruption assumptions, using OpenStreetMap data."
+        )
+    else:
+        st.title(f"{city_name} Hospital Accessibility")
+        st.caption(
+            "Residential grid analysis using OpenStreetMap road, hospital, clinic, "
+            "and land-use data."
+        )
 
     with st.spinner("Downloading OpenStreetMap data and calculating routes..."):
         result = load_analysis(
@@ -100,6 +125,7 @@ def main() -> None:
             distance_medium,
             time_good,
             time_medium,
+            travel_time_multiplier,
         )
 
     display_areas = (
@@ -135,7 +161,7 @@ def main() -> None:
     )
     map_key = (
         f"{scenario}-{metric}-{distance_good}-{distance_medium}-"
-        f"{time_good}-{time_medium}"
+        f"{time_good}-{time_medium}-{travel_time_multiplier}"
     )
     st_folium(
         fmap,
@@ -150,7 +176,9 @@ def main() -> None:
             "Accessibility is measured from residential 1 km grid cells to the nearest "
             "destination through the drivable road network. Driving time is estimated from "
             "OpenStreetMap road speeds; it is not live traffic data. Grey cells have less "
-            "than 5% mapped residential land-use coverage and are excluded from scoring."
+            "than 5% mapped residential land-use coverage and are excluded from scoring. "
+            "The disruption factor is a sensitivity-analysis assumption, not evidence of "
+            "live road availability, conflict conditions, or actual ambulance response time."
         )
 
 
