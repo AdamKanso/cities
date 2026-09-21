@@ -55,6 +55,15 @@ def download_candidate_areas(place: str, boundary: gpd.GeoDataFrame) -> gpd.GeoD
     return make_analysis_grid(boundary)
 
 
+def download_residential_landuse(
+    place: str,
+    boundary: gpd.GeoDataFrame,
+) -> gpd.GeoDataFrame:
+    """Download residential land-use polygons for density estimation."""
+    residential = _download_polygons(place, RESIDENTIAL_TAGS, boundary)
+    return residential[["geometry"]]
+
+
 def _download_polygons(
     place: str,
     tags: dict[str, object],

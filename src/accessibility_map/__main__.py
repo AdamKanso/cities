@@ -10,6 +10,8 @@ from accessibility_map.analysis import (
     TravelTimeThresholds,
     attach_accessibility_classes,
     attach_travel_time_classes,
+    attach_priority_scores,
+    attach_residential_density,
     nearest_hospital_by_network,
     nearest_hospital_travel_time_by_network,
     nearest_hospital_by_straight_line,
@@ -20,6 +22,7 @@ from accessibility_map.osm_data import (
     download_candidate_areas,
     download_city_boundary,
     download_hospitals,
+    download_residential_landuse,
     download_road_graph,
 )
 
@@ -91,6 +94,9 @@ def main() -> None:
     areas = download_candidate_areas(args.place, boundary)
     area_points = representative_points(areas)
 
+    print("Downloading residential land-use coverage...")
+    residential_landuse = download_residential_landuse(args.place, boundary)
+
     print("Downloading road network...")
     graph = download_road_graph(args.place)
 
@@ -111,6 +117,11 @@ def main() -> None:
         travel_times,
         time_thresholds,
     )
+    classified_areas = attach_residential_density(
+        classified_areas,
+        residential_landuse,
+    )
+    classified_areas = attach_priority_scores(classified_areas)
 
     print("Building interactive map...")
     fmap = build_map(boundary, classified_areas, hospitals, graph)
