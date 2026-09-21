@@ -28,7 +28,7 @@ def build_map(
     fmap = folium.Map(
         location=[center.y, center.x],
         zoom_start=12,
-        tiles="cartodbpositron",
+        tiles="OpenStreetMap",
         control_scale=True,
     )
 

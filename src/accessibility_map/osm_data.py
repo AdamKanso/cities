@@ -75,8 +75,9 @@ def _download_polygons(
         polygons["name"] = None
     polygons["name"] = polygons["name"].fillna("Residential area")
 
-    clipped = gpd.clip(polygons[["name", "geometry"]].to_crs(boundary.crs), boundary)
-    clipped = clipped[~clipped.geometry.is_empty].copy()
+    clipped = _keep_polygon_parts(
+        gpd.clip(polygons[["name", "geometry"]].to_crs(boundary.crs), boundary)
+    )
     clipped["area_id"] = [f"area-{index + 1}" for index in range(len(clipped))]
     return clipped[["area_id", "name", "geometry"]].to_crs("EPSG:4326")
 
@@ -100,8 +101,20 @@ def make_analysis_grid(
         x += cell_size_m
 
     grid = gpd.GeoDataFrame({"geometry": cells}, crs=projected_crs)
-    clipped = gpd.clip(grid, boundary_projected)
-    clipped = clipped[~clipped.geometry.is_empty].copy()
+    clipped = _keep_polygon_parts(gpd.clip(grid, boundary_projected))
     clipped["area_id"] = [f"grid-{index + 1}" for index in range(len(clipped))]
     clipped["name"] = clipped["area_id"]
     return clipped[["area_id", "name", "geometry"]].to_crs("EPSG:4326")
+
+
+def _keep_polygon_parts(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Keep polygon outputs after clipping and remove lines or points."""
+    if gdf.empty:
+        return gdf
+    exploded = gdf.explode(index_parts=False).reset_index(drop=True)
+    polygons = exploded[
+        exploded.geometry.notna()
+        & ~exploded.geometry.is_empty
+        & exploded.geometry.geom_type.isin(["Polygon", "MultiPolygon"])
+    ].copy()
+    return polygons
