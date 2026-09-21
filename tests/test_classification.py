@@ -1,4 +1,11 @@
-from accessibility_map.analysis import classify_accessibility
+import geopandas as gpd
+from shapely.geometry import Point
+
+from accessibility_map.analysis import (
+    AccessibilityThresholds,
+    attach_accessibility_classes,
+    classify_accessibility,
+)
 
 
 def test_classify_good_medium_poor():
@@ -9,3 +16,22 @@ def test_classify_good_medium_poor():
 
 def test_classify_missing_distance():
     assert classify_accessibility(None, 1500, 3000) == "unknown"
+
+
+def test_attach_accessibility_classes():
+    areas = gpd.GeoDataFrame(
+        {
+            "name": ["Area A", "Area B", "Area C"],
+            "geometry": [Point(0, 0), Point(1, 1), Point(2, 2)],
+        },
+        crs="EPSG:4326",
+    )
+
+    result = attach_accessibility_classes(
+        areas,
+        [800, 2200, None],
+        AccessibilityThresholds(good_m=1500, medium_m=3000),
+    )
+
+    assert list(result["accessibility"]) == ["good", "medium", "unknown"]
+    assert list(result["nearest_hospital_m"]) == [800, 2200, None]
