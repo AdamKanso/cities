@@ -1,4 +1,5 @@
 import geopandas as gpd
+import pandas as pd
 from shapely.geometry import Point
 
 from accessibility_map.analysis import (
@@ -34,4 +35,5 @@ def test_attach_accessibility_classes():
     )
 
     assert list(result["accessibility"]) == ["good", "medium", "unknown"]
-    assert list(result["nearest_hospital_m"]) == [800, 2200, None]
+    assert list(result["nearest_hospital_m"].iloc[:2]) == [800, 2200]
+    assert pd.isna(result["nearest_hospital_m"].iloc[2])
