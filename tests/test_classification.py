@@ -3,6 +3,7 @@ import networkx as nx
 import pandas as pd
 from shapely.geometry import Point
 from shapely.geometry import box
+from shapely.geometry import MultiPolygon
 
 from accessibility_map.analysis import (
     AccessibilityThresholds,
@@ -16,6 +17,7 @@ from accessibility_map.analysis import (
     filter_residential_areas,
     nearest_hospital_by_network,
 )
+from accessibility_map.osm_data import make_analysis_grid
 
 
 def test_apply_travel_time_multiplier_preserves_missing_routes():
@@ -135,3 +137,23 @@ def test_filter_residential_areas_keeps_covered_cells():
     result = filter_residential_areas(areas)
 
     assert list(result["residential_coverage_percent"]) == [5, 75]
+
+
+def test_analysis_grid_recombines_split_boundary_pieces():
+    boundary = gpd.GeoDataFrame(
+        {
+            "geometry": [
+                MultiPolygon(
+                    [
+                        box(9.0, 45.0, 9.004, 45.01),
+                        box(9.006, 45.0, 9.01, 45.01),
+                    ]
+                )
+            ]
+        },
+        crs="EPSG:4326",
+    )
+
+    result = make_analysis_grid(boundary, cell_size_m=1000)
+
+    assert result["area_id"].is_unique

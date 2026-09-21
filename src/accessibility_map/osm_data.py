@@ -116,8 +116,11 @@ def make_analysis_grid(
         x += cell_size_m
 
     grid = gpd.GeoDataFrame({"geometry": cells}, crs=projected_crs)
-    clipped = _keep_polygon_parts(gpd.clip(grid, boundary_projected))
-    clipped["area_id"] = [f"cell-{index + 1:03d}" for index in range(len(clipped))]
+    grid["area_id"] = [f"cell-{index + 1:03d}" for index in range(len(grid))]
+    clipped_parts = _keep_polygon_parts(gpd.clip(grid, boundary_projected))
+    # A coastal or irregular boundary can split one square into several pieces.
+    # Recombine those pieces so each original square remains one analysis cell.
+    clipped = clipped_parts.dissolve(by="area_id", as_index=False)
     clipped["name"] = [
         f"Residential grid cell {index + 1:03d}" for index in range(len(clipped))
     ]
