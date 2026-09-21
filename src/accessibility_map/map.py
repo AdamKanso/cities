@@ -192,7 +192,7 @@ def _add_priority_areas(fmap: folium.Map, areas: gpd.GeoDataFrame) -> None:
 
 
 def _add_hospitals(fmap: folium.Map, hospitals: gpd.GeoDataFrame) -> None:
-    hospital_layer = folium.FeatureGroup(name="Hospitals and clinics")
+    hospital_layer = folium.FeatureGroup(name="Hospitals")
     for _, hospital in hospitals.to_crs("EPSG:4326").iterrows():
         point = hospital.geometry.centroid
         folium.CircleMarker(
@@ -202,7 +202,7 @@ def _add_hospitals(fmap: folium.Map, hospitals: gpd.GeoDataFrame) -> None:
             fill=True,
             fill_color="#ef4444",
             fill_opacity=0.9,
-            popup=hospital.get("name", "Hospital or clinic"),
+            popup=hospital.get("name", "Hospital"),
         ).add_to(hospital_layer)
     hospital_layer.add_to(fmap)
 

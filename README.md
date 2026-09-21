@@ -1,6 +1,6 @@
 # Interactive Accessibility Map
 
-This project downloads OpenStreetMap data for a selected city, measures access from residential areas to hospitals, classifies areas as having good, medium, or poor accessibility, and exports an interactive Folium map.
+This project downloads OpenStreetMap data for a selected city, measures access from residential grid cells to hospitals, classifies areas as having good, medium, or poor accessibility, and exports an interactive Folium map.
 
 The default example city is Milan, Italy, but the command line interface accepts any city name that can be geocoded by OpenStreetMap.
 
@@ -10,7 +10,8 @@ Which residential areas have poor access to hospitals?
 
 ## Methods
 
-- Download city boundary, hospitals, roads, and neighborhood or residential area data from OpenStreetMap.
+- Download city boundary, hospitals, roads, and residential land-use data from OpenStreetMap.
+- Create a regular 1 km grid inside the city boundary and keep cells with meaningful residential coverage.
 - Build a drivable road network with OSMnx.
 - Estimate road-network distance and driving time from each residential area to the nearest hospital.
 - Classify each area using both distance and travel-time thresholds.
@@ -99,14 +100,16 @@ The map shows:
 
 ## Notes
 
-OpenStreetMap data quality varies by city. If named neighborhood polygons are sparse, the project falls back to residential land-use areas and then to a regular analysis grid clipped to the city boundary.
+OpenStreetMap data quality varies by city. Residential land-use coverage is used to identify the grid cells most relevant to the analysis.
+
+The default thresholds are 0.75 km and 1.5 km for distance, and 5 and 10 minutes for estimated driving time. They can be changed through the command-line options for sensitivity analysis.
 
 ## Suggested Report Structure
 
 1. Introduction and research question.
 2. Why hospital accessibility matters in urban planning.
 3. Data source: OpenStreetMap hospitals, roads, and residential or neighborhood polygons.
-4. Method: city boundary download, residential area extraction, nearest hospital distance, classification thresholds, and Folium map visualization.
+4. Method: city boundary download, residential grid creation, nearest hospital distance and travel time, classification thresholds, and Folium map visualization.
 5. Results: describe which areas appear good, medium, or poor.
 6. Limitations: OSM completeness, estimated rather than live travel time, residential land use as a population proxy, and simplified threshold choices.
 7. Possible improvements: public transport, census population weighting, hospital capacity, and emergency response times.
