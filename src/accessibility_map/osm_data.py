@@ -8,13 +8,8 @@ from shapely.geometry import Polygon, box
 
 
 HOSPITAL_TAGS = {
-    "amenity": ["hospital", "clinic"],
-    "healthcare": ["hospital", "clinic"],
-}
-
-NEIGHBORHOOD_TAGS = {
-    "place": ["neighbourhood", "quarter", "suburb"],
-    "boundary": "administrative",
+    "amenity": "hospital",
+    "healthcare": "hospital",
 }
 
 RESIDENTIAL_TAGS = {
@@ -29,7 +24,7 @@ def download_city_boundary(place: str) -> gpd.GeoDataFrame:
 
 
 def download_hospitals(place: str) -> gpd.GeoDataFrame:
-    """Download hospital and clinic features from OpenStreetMap."""
+    """Download hospital features from OpenStreetMap."""
     hospitals = ox.features_from_place(place, HOSPITAL_TAGS)
     hospitals = hospitals.reset_index()
     hospitals = hospitals[hospitals.geometry.notna()].copy()
@@ -43,15 +38,7 @@ def download_road_graph(place: str):
 
 
 def download_candidate_areas(place: str, boundary: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    """Download neighborhood polygons, with residential areas as fallback."""
-    neighborhoods = _download_polygons(place, NEIGHBORHOOD_TAGS, boundary)
-    if not neighborhoods.empty:
-        return neighborhoods
-
-    residential = _download_polygons(place, RESIDENTIAL_TAGS, boundary)
-    if not residential.empty:
-        return residential
-
+    """Create a consistent grid of analysis areas inside the city boundary."""
     return make_analysis_grid(boundary)
 
 
@@ -93,7 +80,7 @@ def _download_polygons(
 
 def make_analysis_grid(
     boundary: gpd.GeoDataFrame,
-    cell_size_m: int = 1200,
+    cell_size_m: int = 1000,
 ) -> gpd.GeoDataFrame:
     """Create a regular grid clipped to the city boundary."""
     projected_crs = boundary.estimate_utm_crs()
@@ -111,8 +98,10 @@ def make_analysis_grid(
 
     grid = gpd.GeoDataFrame({"geometry": cells}, crs=projected_crs)
     clipped = _keep_polygon_parts(gpd.clip(grid, boundary_projected))
-    clipped["area_id"] = [f"grid-{index + 1}" for index in range(len(clipped))]
-    clipped["name"] = clipped["area_id"]
+    clipped["area_id"] = [f"cell-{index + 1:03d}" for index in range(len(clipped))]
+    clipped["name"] = [
+        f"Residential grid cell {index + 1:03d}" for index in range(len(clipped))
+    ]
     return clipped[["area_id", "name", "geometry"]].to_crs("EPSG:4326")
 
 
