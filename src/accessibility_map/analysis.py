@@ -200,6 +200,19 @@ def attach_travel_time_classes(
     return result
 
 
+def apply_travel_time_multiplier(
+    travel_times_minutes: list[float | None],
+    multiplier: float,
+) -> list[float | None]:
+    """Apply a scenario multiplier to estimated driving times."""
+    if multiplier < 1:
+        raise ValueError("The travel-time multiplier must be at least 1.")
+    return [
+        round(travel_time * multiplier, 2) if travel_time is not None else None
+        for travel_time in travel_times_minutes
+    ]
+
+
 def attach_residential_density(
     areas: gpd.GeoDataFrame,
     residential_landuse: gpd.GeoDataFrame,

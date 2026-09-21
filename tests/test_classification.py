@@ -7,6 +7,7 @@ from shapely.geometry import box
 from accessibility_map.analysis import (
     AccessibilityThresholds,
     TravelTimeThresholds,
+    apply_travel_time_multiplier,
     attach_accessibility_classes,
     attach_priority_scores,
     attach_residential_density,
@@ -15,6 +16,19 @@ from accessibility_map.analysis import (
     filter_residential_areas,
     nearest_hospital_by_network,
 )
+
+
+def test_apply_travel_time_multiplier_preserves_missing_routes():
+    assert apply_travel_time_multiplier([4.25, None, 10], 1.5) == [6.38, None, 15.0]
+
+
+def test_apply_travel_time_multiplier_rejects_faster_than_baseline():
+    try:
+        apply_travel_time_multiplier([5], 0.9)
+    except ValueError as error:
+        assert str(error) == "The travel-time multiplier must be at least 1."
+    else:
+        raise AssertionError("Expected a multiplier below one to be rejected.")
 
 
 def test_classify_good_medium_poor():
