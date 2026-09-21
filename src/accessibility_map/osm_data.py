@@ -12,6 +12,11 @@ HOSPITAL_TAGS = {
     "healthcare": "hospital",
 }
 
+CLINIC_TAGS = {
+    "amenity": "clinic",
+    "healthcare": "clinic",
+}
+
 RESIDENTIAL_TAGS = {
     "landuse": "residential",
 }
@@ -25,11 +30,12 @@ def download_city_boundary(place: str) -> gpd.GeoDataFrame:
 
 def download_hospitals(place: str) -> gpd.GeoDataFrame:
     """Download hospital features from OpenStreetMap."""
-    hospitals = ox.features_from_place(place, HOSPITAL_TAGS)
-    hospitals = hospitals.reset_index()
-    hospitals = hospitals[hospitals.geometry.notna()].copy()
-    hospitals["name"] = hospitals.get("name", "Unnamed hospital")
-    return hospitals[["name", "geometry"]].to_crs("EPSG:4326")
+    return _download_healthcare_features(place, HOSPITAL_TAGS, "Unnamed hospital")
+
+
+def download_clinics(place: str) -> gpd.GeoDataFrame:
+    """Download clinic features from OpenStreetMap."""
+    return _download_healthcare_features(place, CLINIC_TAGS, "Unnamed clinic")
 
 
 def download_road_graph(place: str):
@@ -76,6 +82,19 @@ def _download_polygons(
     )
     clipped["area_id"] = [f"area-{index + 1}" for index in range(len(clipped))]
     return clipped[["area_id", "name", "geometry"]].to_crs("EPSG:4326")
+
+
+def _download_healthcare_features(
+    place: str,
+    tags: dict[str, object],
+    unnamed_label: str,
+) -> gpd.GeoDataFrame:
+    features = ox.features_from_place(place, tags).reset_index()
+    features = features[features.geometry.notna()].copy()
+    if "name" not in features.columns:
+        features["name"] = unnamed_label
+    features["name"] = features["name"].fillna(unnamed_label)
+    return features[["name", "geometry"]].to_crs("EPSG:4326")
 
 
 def make_analysis_grid(
