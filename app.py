@@ -147,6 +147,11 @@ def main() -> None:
     metrics = st.columns(4)
     for column, label, key in zip(metrics, labels, keys, strict=True):
         column.metric(label, int(counts.get(key, 0)))
+    st.caption(
+        f"{len(display_areas)} analysed residential grid cells in this scenario; "
+        f"{len(result.excluded_areas)} cells are excluded because mapped residential "
+        "land-use coverage is below 5%. Card values count cells, not people or facilities."
+    )
 
     fmap = build_map(
         result.boundary,
