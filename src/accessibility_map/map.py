@@ -32,6 +32,8 @@ def build_map(
     hospitals: gpd.GeoDataFrame,
     clinics: gpd.GeoDataFrame,
     graph,
+    selected_scenario: str = "Hospitals only",
+    selected_metric: str = "Distance",
 ) -> folium.Map:
     """Build an interactive accessibility map."""
     center = boundary.geometry.iloc[0].centroid
@@ -55,26 +57,41 @@ def build_map(
     _add_boundary(fmap, boundary)
     _add_roads(fmap, graph)
     _add_excluded_areas(fmap, excluded_areas)
-    _add_accessibility_areas(fmap, areas, "Distance: hospitals only", True)
+    _add_accessibility_areas(
+        fmap,
+        areas,
+        "Distance: hospitals only",
+        selected_scenario == "Hospitals only" and selected_metric == "Distance",
+    )
     _add_accessibility_areas(
         fmap,
         areas_with_clinics,
         "Distance: hospitals + clinics",
-        False,
+        selected_scenario == "Hospitals + clinics" and selected_metric == "Distance",
     )
-    _add_travel_time_areas(fmap, areas, "Driving time: hospitals only", False)
+    _add_travel_time_areas(
+        fmap,
+        areas,
+        "Driving time: hospitals only",
+        selected_scenario == "Hospitals only" and selected_metric == "Driving time",
+    )
     _add_travel_time_areas(
         fmap,
         areas_with_clinics,
         "Driving time: hospitals + clinics",
-        False,
+        selected_scenario == "Hospitals + clinics" and selected_metric == "Driving time",
     )
-    _add_priority_areas(fmap, areas, "Priority: hospitals only", False)
+    _add_priority_areas(
+        fmap,
+        areas,
+        "Priority: hospitals only",
+        selected_scenario == "Hospitals only" and selected_metric == "Priority",
+    )
     _add_priority_areas(
         fmap,
         areas_with_clinics,
         "Priority: hospitals + clinics",
-        False,
+        selected_scenario == "Hospitals + clinics" and selected_metric == "Priority",
     )
     _add_hospitals(fmap, hospitals)
     _add_clinics(fmap, clinics)

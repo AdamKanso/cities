@@ -88,6 +88,16 @@ python -m accessibility_map --place "Milan, Italy" --output outputs/milan_access
 
 Open the generated HTML file in a browser.
 
+## Streamlit App
+
+Run the local app:
+
+```powershell
+streamlit run app.py
+```
+
+Open the local address shown in the terminal, normally `http://localhost:8501`. The app provides controls for hospitals versus hospitals plus clinics, map metric, and accessibility thresholds.
+
 ## Output
 
 The map shows:
