@@ -5,31 +5,12 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-import geopandas as gpd
-import pandas as pd
-
 from accessibility_map.analysis import (
     AccessibilityThresholds,
     TravelTimeThresholds,
-    attach_accessibility_classes,
-    attach_travel_time_classes,
-    attach_priority_scores,
-    attach_residential_density,
-    nearest_hospital_by_network,
-    nearest_hospital_travel_time_by_network,
-    nearest_hospital_by_straight_line,
-    filter_residential_areas,
-    representative_points,
 )
 from accessibility_map.map import build_map, save_map
-from accessibility_map.osm_data import (
-    download_candidate_areas,
-    download_clinics,
-    download_city_boundary,
-    download_hospitals,
-    download_residential_landuse,
-    download_road_graph,
-)
+from accessibility_map.workflow import run_analysis
 
 
 def parse_args() -> argparse.Namespace:
@@ -89,92 +70,23 @@ def main() -> None:
         medium_minutes=args.medium_time_threshold,
     )
 
-    print(f"Downloading city boundary for {args.place}...")
-    boundary = download_city_boundary(args.place)
-
-    print("Downloading hospitals...")
-    hospitals = download_hospitals(args.place)
-    print("Downloading clinics for comparison...")
-    clinics = download_clinics(args.place)
-    facilities_with_clinics = gpd.GeoDataFrame(
-        pd.concat([hospitals, clinics], ignore_index=True),
-        geometry="geometry",
-        crs="EPSG:4326",
-    )
-
-    print("Creating regular city analysis grid...")
-    all_areas = download_candidate_areas(args.place, boundary)
-
-    print("Downloading residential land-use coverage...")
-    residential_landuse = download_residential_landuse(args.place, boundary)
-    all_areas = attach_residential_density(all_areas, residential_landuse)
-    excluded_areas = all_areas[
-        all_areas["residential_coverage_percent"] < 5
-    ].copy()
-    areas = filter_residential_areas(all_areas)
-    print(f"Analysing {len(areas)} residential grid cells...")
-    area_points = representative_points(areas)
-
-    print("Downloading road network...")
-    graph = download_road_graph(args.place)
-
-    if args.straight_line:
-        print("Calculating straight-line distance to nearest hospital...")
-        distances = nearest_hospital_by_straight_line(area_points, hospitals)
-        distances_with_clinics = nearest_hospital_by_straight_line(
-            area_points,
-            facilities_with_clinics,
-        )
-    else:
-        print("Calculating road-network distance to nearest hospital...")
-        distances = nearest_hospital_by_network(graph, area_points, hospitals)
-        print("Calculating distance with clinics included...")
-        distances_with_clinics = nearest_hospital_by_network(
-            graph,
-            area_points,
-            facilities_with_clinics,
-        )
-
-    print("Calculating estimated driving time to nearest hospital...")
-    travel_times = nearest_hospital_travel_time_by_network(graph, area_points, hospitals)
-    print("Calculating driving time with clinics included...")
-    travel_times_with_clinics = nearest_hospital_travel_time_by_network(
-        graph,
-        area_points,
-        facilities_with_clinics,
-    )
-
-    print("Classifying accessibility...")
-    classified_areas = attach_accessibility_classes(areas, distances, thresholds)
-    classified_areas = attach_travel_time_classes(
-        classified_areas,
-        travel_times,
-        time_thresholds,
-    )
-    classified_areas = attach_priority_scores(classified_areas)
-    classified_areas_with_clinics = attach_accessibility_classes(
-        areas,
-        distances_with_clinics,
+    result = run_analysis(
+        args.place,
         thresholds,
-    )
-    classified_areas_with_clinics = attach_travel_time_classes(
-        classified_areas_with_clinics,
-        travel_times_with_clinics,
         time_thresholds,
-    )
-    classified_areas_with_clinics = attach_priority_scores(
-        classified_areas_with_clinics
+        straight_line=args.straight_line,
+        reporter=print,
     )
 
     print("Building interactive map...")
     fmap = build_map(
-        boundary,
-        classified_areas,
-        classified_areas_with_clinics,
-        excluded_areas,
-        hospitals,
-        clinics,
-        graph,
+        result.boundary,
+        result.areas,
+        result.areas_with_clinics,
+        result.excluded_areas,
+        result.hospitals,
+        result.clinics,
+        result.graph,
     )
     output_path = save_map(fmap, Path(args.output))
     print(f"Saved map to {output_path.resolve()}")
