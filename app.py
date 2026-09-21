@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import streamlit as st
-import streamlit.components.v1 as components
+from streamlit_folium import st_folium
 
 from accessibility_map.analysis import AccessibilityThresholds, TravelTimeThresholds
 from accessibility_map.map import build_map
@@ -122,7 +122,17 @@ def main() -> None:
         selected_scenario=scenario,
         selected_metric=metric,
     )
-    components.html(fmap.get_root().render(), height=780, scrolling=False)
+    map_key = (
+        f"{scenario}-{metric}-{distance_good}-{distance_medium}-"
+        f"{time_good}-{time_medium}"
+    )
+    st_folium(
+        fmap,
+        width=None,
+        height=780,
+        key=map_key,
+        returned_objects=[],
+    )
 
     with st.expander("Methodology and limitations"):
         st.write(
