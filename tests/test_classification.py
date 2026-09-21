@@ -12,6 +12,7 @@ from accessibility_map.analysis import (
     attach_residential_density,
     attach_travel_time_classes,
     classify_accessibility,
+    filter_residential_areas,
     nearest_hospital_by_network,
 )
 
@@ -106,3 +107,17 @@ def test_network_distance_respects_one_way_roads_toward_hospitals():
     )
 
     assert nearest_hospital_by_network(graph, origins, hospitals) == [600.0]
+
+
+def test_filter_residential_areas_keeps_covered_cells():
+    areas = gpd.GeoDataFrame(
+        {
+            "residential_coverage_percent": [4.9, 5, 75],
+            "geometry": [Point(0, 0), Point(1, 1), Point(2, 2)],
+        },
+        crs="EPSG:4326",
+    )
+
+    result = filter_residential_areas(areas)
+
+    assert list(result["residential_coverage_percent"]) == [5, 75]

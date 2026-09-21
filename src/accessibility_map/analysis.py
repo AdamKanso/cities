@@ -14,16 +14,16 @@ from shapely.geometry import Point
 class AccessibilityThresholds:
     """Distance thresholds in meters for accessibility classes."""
 
-    good_m: float = 1500
-    medium_m: float = 3000
+    good_m: float = 750
+    medium_m: float = 1500
 
 
 @dataclass(frozen=True)
 class TravelTimeThresholds:
     """Driving-time thresholds in minutes for accessibility classes."""
 
-    good_minutes: float = 10
-    medium_minutes: float = 20
+    good_minutes: float = 5
+    medium_minutes: float = 10
 
 
 def classify_accessibility(
@@ -260,3 +260,16 @@ def attach_priority_scores(areas: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     result.loc[result["priority_score"] >= 1.34, "priority"] = "high"
     result.loc[access_weight.isna(), "priority"] = "unknown"
     return result
+
+
+def filter_residential_areas(
+    areas: gpd.GeoDataFrame,
+    minimum_coverage_percent: float = 5,
+) -> gpd.GeoDataFrame:
+    """Keep analysis cells containing a meaningful amount of residential land use."""
+    residential_areas = areas[
+        areas["residential_coverage_percent"] >= minimum_coverage_percent
+    ].copy()
+    if residential_areas.empty:
+        return areas.copy()
+    return residential_areas.reset_index(drop=True)

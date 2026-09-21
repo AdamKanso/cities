@@ -15,6 +15,7 @@ from accessibility_map.analysis import (
     nearest_hospital_by_network,
     nearest_hospital_travel_time_by_network,
     nearest_hospital_by_straight_line,
+    filter_residential_areas,
     representative_points,
 )
 from accessibility_map.map import build_map, save_map
@@ -44,13 +45,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--good-threshold",
         type=float,
-        default=1500,
+        default=750,
         help="Maximum distance in meters for good accessibility.",
     )
     parser.add_argument(
         "--medium-threshold",
         type=float,
-        default=3000,
+        default=1500,
         help="Maximum distance in meters for medium accessibility.",
     )
     parser.add_argument(
@@ -61,13 +62,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--good-time-threshold",
         type=float,
-        default=10,
+        default=5,
         help="Maximum driving time in minutes for good accessibility.",
     )
     parser.add_argument(
         "--medium-time-threshold",
         type=float,
-        default=20,
+        default=10,
         help="Maximum driving time in minutes for medium accessibility.",
     )
     return parser.parse_args()
@@ -87,15 +88,18 @@ def main() -> None:
     print(f"Downloading city boundary for {args.place}...")
     boundary = download_city_boundary(args.place)
 
-    print("Downloading hospitals and clinics...")
+    print("Downloading hospitals...")
     hospitals = download_hospitals(args.place)
 
-    print("Downloading residential or neighborhood areas...")
+    print("Creating regular city analysis grid...")
     areas = download_candidate_areas(args.place, boundary)
-    area_points = representative_points(areas)
 
     print("Downloading residential land-use coverage...")
     residential_landuse = download_residential_landuse(args.place, boundary)
+    areas = attach_residential_density(areas, residential_landuse)
+    areas = filter_residential_areas(areas)
+    print(f"Analysing {len(areas)} residential grid cells...")
+    area_points = representative_points(areas)
 
     print("Downloading road network...")
     graph = download_road_graph(args.place)
@@ -116,10 +120,6 @@ def main() -> None:
         classified_areas,
         travel_times,
         time_thresholds,
-    )
-    classified_areas = attach_residential_density(
-        classified_areas,
-        residential_landuse,
     )
     classified_areas = attach_priority_scores(classified_areas)
 
