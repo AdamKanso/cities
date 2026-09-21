@@ -1,11 +1,14 @@
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point
+from shapely.geometry import box
 
 from accessibility_map.analysis import (
     AccessibilityThresholds,
     TravelTimeThresholds,
     attach_accessibility_classes,
+    attach_priority_scores,
+    attach_residential_density,
     attach_travel_time_classes,
     classify_accessibility,
 )
@@ -56,3 +59,34 @@ def test_attach_travel_time_classes():
     assert list(result["travel_time_accessibility"]) == ["good", "medium", "unknown"]
     assert list(result["nearest_hospital_minutes"].iloc[:2]) == [8, 15]
     assert pd.isna(result["nearest_hospital_minutes"].iloc[2])
+
+
+def test_attach_residential_density_measures_landuse_overlap():
+    areas = gpd.GeoDataFrame(
+        {"geometry": [box(0, 0, 0.01, 0.01), box(0.01, 0, 0.02, 0.01)]},
+        crs="EPSG:4326",
+    )
+    residential = gpd.GeoDataFrame(
+        {"geometry": [box(0, 0, 0.01, 0.01)]},
+        crs="EPSG:4326",
+    )
+
+    result = attach_residential_density(areas, residential)
+
+    assert result["residential_coverage_percent"].iloc[0] > 99
+    assert result["residential_coverage_percent"].iloc[1] == 0
+
+
+def test_attach_priority_scores_favors_poor_access_with_more_residential_coverage():
+    areas = gpd.GeoDataFrame(
+        {
+            "travel_time_accessibility": ["poor", "poor", "good", "unknown"],
+            "residential_coverage_percent": [90, 10, 100, 20],
+            "geometry": [Point(0, 0), Point(1, 1), Point(2, 2), Point(3, 3)],
+        },
+        crs="EPSG:4326",
+    )
+
+    result = attach_priority_scores(areas)
+
+    assert list(result["priority"]) == ["high", "medium", "low", "unknown"]

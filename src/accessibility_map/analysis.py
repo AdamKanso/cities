@@ -196,3 +196,65 @@ def attach_travel_time_classes(
         for travel_time in travel_times_minutes
     ]
     return result
+
+
+def attach_residential_density(
+    areas: gpd.GeoDataFrame,
+    residential_landuse: gpd.GeoDataFrame,
+) -> gpd.GeoDataFrame:
+    """Measure residential land-use coverage as an area-density proxy."""
+    result = areas.copy().reset_index(drop=True)
+    projected_crs = estimate_utm_crs(result)
+    projected_areas = result.to_crs(projected_crs).copy()
+    projected_areas["_analysis_id"] = projected_areas.index
+    projected_areas["area_km2"] = projected_areas.geometry.area / 1_000_000
+    projected_areas["residential_landuse_km2"] = 0.0
+
+    if not residential_landuse.empty:
+        projected_residential = residential_landuse.to_crs(projected_crs)
+        intersections = gpd.overlay(
+            projected_areas[["_analysis_id", "geometry"]],
+            projected_residential[["geometry"]],
+            how="intersection",
+            keep_geom_type=False,
+        )
+        if not intersections.empty:
+            covered_km2 = (
+                intersections.assign(_covered_km2=intersections.geometry.area / 1_000_000)
+                .groupby("_analysis_id")["_covered_km2"]
+                .sum()
+            )
+            projected_areas["residential_landuse_km2"] = (
+                projected_areas["_analysis_id"].map(covered_km2).fillna(0.0)
+            )
+
+    projected_areas["residential_coverage_percent"] = (
+        100
+        * projected_areas["residential_landuse_km2"]
+        / projected_areas["area_km2"]
+    )
+    result["area_km2"] = projected_areas["area_km2"]
+    result["residential_landuse_km2"] = projected_areas["residential_landuse_km2"]
+    result["residential_coverage_percent"] = (
+        projected_areas["residential_coverage_percent"]
+    )
+    return result
+
+
+def attach_priority_scores(areas: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Rank areas by access need and relative residential coverage."""
+    result = areas.copy()
+    maximum_coverage = result["residential_coverage_percent"].max()
+    if maximum_coverage > 0:
+        density_factor = result["residential_coverage_percent"] / maximum_coverage
+    else:
+        density_factor = 0.0
+    access_weight = result["travel_time_accessibility"].map(
+        {"good": 0, "medium": 1, "poor": 2}
+    )
+    result["priority_score"] = (access_weight * density_factor).round(2)
+    result["priority"] = "low"
+    result.loc[result["priority_score"] >= 0.2, "priority"] = "medium"
+    result.loc[result["priority_score"] >= 1.34, "priority"] = "high"
+    result.loc[access_weight.isna(), "priority"] = "unknown"
+    return result
