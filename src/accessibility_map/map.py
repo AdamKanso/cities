@@ -16,6 +16,13 @@ ACCESSIBILITY_COLORS = {
     "unknown": "#969696",
 }
 
+PRIORITY_COLORS = {
+    "high": "#dc2626",
+    "medium": "#f59e0b",
+    "low": "#16a34a",
+    "unknown": "#969696",
+}
+
 
 def build_map(
     boundary: gpd.GeoDataFrame,
@@ -46,6 +53,7 @@ def build_map(
     _add_roads(fmap, graph)
     _add_accessibility_areas(fmap, areas)
     _add_travel_time_areas(fmap, areas)
+    _add_priority_areas(fmap, areas)
     _add_hospitals(fmap, hospitals)
     _add_legend(fmap)
     folium.LayerControl(collapsed=False).add_to(fmap)
@@ -144,6 +152,45 @@ def _add_travel_time_areas(fmap: folium.Map, areas: gpd.GeoDataFrame) -> None:
     travel_time_layer.add_to(fmap)
 
 
+def _add_priority_areas(fmap: folium.Map, areas: gpd.GeoDataFrame) -> None:
+    """Add a toggleable layer identifying higher-priority underserved areas."""
+    priority_layer = folium.FeatureGroup(
+        name="Residential access priority",
+        show=False,
+    )
+    folium.GeoJson(
+        areas,
+        style_function=lambda feature: {
+            "fillColor": PRIORITY_COLORS.get(
+                feature["properties"].get("priority", "unknown"),
+                PRIORITY_COLORS["unknown"],
+            ),
+            "color": "#334155",
+            "weight": 0.7,
+            "fillOpacity": 0.62,
+        },
+        tooltip=folium.GeoJsonTooltip(
+            fields=[
+                "name",
+                "priority",
+                "priority_score",
+                "residential_coverage_percent",
+                "nearest_hospital_minutes",
+            ],
+            aliases=[
+                "Area",
+                "Priority",
+                "Priority score",
+                "Residential coverage (%)",
+                "Estimated drive (min)",
+            ],
+            localize=True,
+            sticky=False,
+        ),
+    ).add_to(priority_layer)
+    priority_layer.add_to(fmap)
+
+
 def _add_hospitals(fmap: folium.Map, hospitals: gpd.GeoDataFrame) -> None:
     hospital_layer = folium.FeatureGroup(name="Hospitals and clinics")
     for _, hospital in hospitals.to_crs("EPSG:4326").iterrows():
@@ -182,3 +229,24 @@ def _add_legend(fmap: folium.Map) -> None:
     </div>
     """
     fmap.get_root().html.add_child(folium.Element(legend_html))
+    priority_legend_html = """
+    <div style="
+        position: fixed;
+        bottom: 28px;
+        left: 202px;
+        z-index: 9999;
+        background: white;
+        padding: 12px 14px;
+        border: 1px solid #cbd5e1;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+        font-size: 13px;
+        line-height: 1.5;
+    ">
+        <strong>Residential access priority</strong><br>
+        <span style="color:#dc2626;">■</span> High<br>
+        <span style="color:#f59e0b;">■</span> Medium<br>
+        <span style="color:#16a34a;">■</span> Low<br>
+        <span style="color:#969696;">■</span> Unknown
+    </div>
+    """
+    fmap.get_root().html.add_child(folium.Element(priority_legend_html))
