@@ -18,6 +18,14 @@ class AccessibilityThresholds:
     medium_m: float = 3000
 
 
+@dataclass(frozen=True)
+class TravelTimeThresholds:
+    """Driving-time thresholds in minutes for accessibility classes."""
+
+    good_minutes: float = 10
+    medium_minutes: float = 20
+
+
 def classify_accessibility(
     distance_m: float | None,
     good_threshold_m: float,
@@ -89,6 +97,48 @@ def nearest_hospital_by_network(
     return distances
 
 
+def nearest_hospital_travel_time_by_network(
+    graph: nx.MultiDiGraph,
+    origins: gpd.GeoDataFrame,
+    hospitals: gpd.GeoDataFrame,
+) -> list[float | None]:
+    """Measure shortest estimated driving time in minutes to a hospital."""
+    if origins.empty:
+        return []
+    if hospitals.empty:
+        return [None for _ in range(len(origins))]
+
+    travel_graph = ox.routing.add_edge_speeds(graph.copy())
+    travel_graph = ox.routing.add_edge_travel_times(travel_graph)
+    graph_crs = travel_graph.graph.get("crs")
+    origins_wgs84 = representative_points(origins).to_crs(graph_crs)
+    hospitals_wgs84 = representative_points(hospitals).to_crs(graph_crs)
+
+    hospital_nodes = list(ox.distance.nearest_nodes(
+        travel_graph,
+        X=hospitals_wgs84.geometry.x,
+        Y=hospitals_wgs84.geometry.y,
+    ))
+    origin_nodes = list(ox.distance.nearest_nodes(
+        travel_graph,
+        X=origins_wgs84.geometry.x,
+        Y=origins_wgs84.geometry.y,
+    ))
+
+    lengths = nx.multi_source_dijkstra_path_length(
+        travel_graph,
+        hospital_nodes,
+        cutoff=None,
+        weight="travel_time",
+    )
+    return [
+        round(float(lengths[origin_node]) / 60, 2)
+        if origin_node in lengths
+        else None
+        for origin_node in origin_nodes
+    ]
+
+
 def nearest_hospital_by_straight_line(
     origins: gpd.GeoDataFrame,
     hospitals: gpd.GeoDataFrame,
@@ -125,5 +175,24 @@ def attach_accessibility_classes(
     result["accessibility"] = [
         classify_accessibility(distance, thresholds.good_m, thresholds.medium_m)
         for distance in distances_m
+    ]
+    return result
+
+
+def attach_travel_time_classes(
+    areas: gpd.GeoDataFrame,
+    travel_times_minutes: list[float | None],
+    thresholds: TravelTimeThresholds,
+) -> gpd.GeoDataFrame:
+    """Attach travel time and travel-time accessibility class columns."""
+    result = areas.copy()
+    result["nearest_hospital_minutes"] = travel_times_minutes
+    result["travel_time_accessibility"] = [
+        classify_accessibility(
+            travel_time,
+            thresholds.good_minutes,
+            thresholds.medium_minutes,
+        )
+        for travel_time in travel_times_minutes
     ]
     return result
