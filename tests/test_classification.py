@@ -1,4 +1,5 @@
 import geopandas as gpd
+import networkx as nx
 import pandas as pd
 from shapely.geometry import Point
 from shapely.geometry import box
@@ -11,6 +12,7 @@ from accessibility_map.analysis import (
     attach_residential_density,
     attach_travel_time_classes,
     classify_accessibility,
+    nearest_hospital_by_network,
 )
 
 
@@ -90,3 +92,17 @@ def test_attach_priority_scores_favors_poor_access_with_more_residential_coverag
     result = attach_priority_scores(areas)
 
     assert list(result["priority"]) == ["high", "medium", "low", "unknown"]
+
+
+def test_network_distance_respects_one_way_roads_toward_hospitals():
+    graph = nx.MultiDiGraph(crs="EPSG:4326")
+    graph.add_node("home", x=9.0, y=45.0)
+    graph.add_node("hospital", x=9.01, y=45.0)
+    graph.add_edge("home", "hospital", length=600)
+    origins = gpd.GeoDataFrame({"geometry": [Point(9.0, 45.0)]}, crs="EPSG:4326")
+    hospitals = gpd.GeoDataFrame(
+        {"geometry": [Point(9.01, 45.0)]},
+        crs="EPSG:4326",
+    )
+
+    assert nearest_hospital_by_network(graph, origins, hospitals) == [600.0]

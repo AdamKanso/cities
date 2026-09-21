@@ -79,9 +79,10 @@ def nearest_hospital_by_network(
         Y=origins_wgs84.geometry.y,
     ))
 
+    route_graph = graph.reverse(copy=False)
     try:
         lengths = nx.multi_source_dijkstra_path_length(
-            graph,
+            route_graph,
             hospital_nodes,
             cutoff=None,
             weight="length",
@@ -125,8 +126,9 @@ def nearest_hospital_travel_time_by_network(
         Y=origins_wgs84.geometry.y,
     ))
 
+    route_graph = travel_graph.reverse(copy=False)
     lengths = nx.multi_source_dijkstra_path_length(
-        travel_graph,
+        route_graph,
         hospital_nodes,
         cutoff=None,
         weight="travel_time",
