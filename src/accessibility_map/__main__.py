@@ -7,8 +7,11 @@ from pathlib import Path
 
 from accessibility_map.analysis import (
     AccessibilityThresholds,
+    TravelTimeThresholds,
     attach_accessibility_classes,
+    attach_travel_time_classes,
     nearest_hospital_by_network,
+    nearest_hospital_travel_time_by_network,
     nearest_hospital_by_straight_line,
     representative_points,
 )
@@ -52,6 +55,18 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Use straight-line distance instead of road-network distance.",
     )
+    parser.add_argument(
+        "--good-time-threshold",
+        type=float,
+        default=10,
+        help="Maximum driving time in minutes for good accessibility.",
+    )
+    parser.add_argument(
+        "--medium-time-threshold",
+        type=float,
+        default=20,
+        help="Maximum driving time in minutes for medium accessibility.",
+    )
     return parser.parse_args()
 
 
@@ -60,6 +75,10 @@ def main() -> None:
     thresholds = AccessibilityThresholds(
         good_m=args.good_threshold,
         medium_m=args.medium_threshold,
+    )
+    time_thresholds = TravelTimeThresholds(
+        good_minutes=args.good_time_threshold,
+        medium_minutes=args.medium_time_threshold,
     )
 
     print(f"Downloading city boundary for {args.place}...")
@@ -82,8 +101,16 @@ def main() -> None:
         print("Calculating road-network distance to nearest hospital...")
         distances = nearest_hospital_by_network(graph, area_points, hospitals)
 
+    print("Calculating estimated driving time to nearest hospital...")
+    travel_times = nearest_hospital_travel_time_by_network(graph, area_points, hospitals)
+
     print("Classifying accessibility...")
     classified_areas = attach_accessibility_classes(areas, distances, thresholds)
+    classified_areas = attach_travel_time_classes(
+        classified_areas,
+        travel_times,
+        time_thresholds,
+    )
 
     print("Building interactive map...")
     fmap = build_map(boundary, classified_areas, hospitals, graph)

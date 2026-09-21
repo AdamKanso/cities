@@ -45,6 +45,7 @@ def build_map(
     _add_boundary(fmap, boundary)
     _add_roads(fmap, graph)
     _add_accessibility_areas(fmap, areas)
+    _add_travel_time_areas(fmap, areas)
     _add_hospitals(fmap, hospitals)
     _add_legend(fmap)
     folium.LayerControl(collapsed=False).add_to(fmap)
@@ -93,9 +94,9 @@ def _add_accessibility_areas(fmap: folium.Map, areas: gpd.GeoDataFrame) -> None:
         lambda value: round(value / 1000, 2) if value is not None else None
     )
 
+    distance_layer = folium.FeatureGroup(name="Distance accessibility", show=True)
     folium.GeoJson(
         display,
-        name="Hospital accessibility",
         style_function=lambda feature: {
             "fillColor": ACCESSIBILITY_COLORS.get(
                 feature["properties"].get("accessibility", "unknown"),
@@ -111,7 +112,36 @@ def _add_accessibility_areas(fmap: folium.Map, areas: gpd.GeoDataFrame) -> None:
             localize=True,
             sticky=False,
         ),
-    ).add_to(fmap)
+    ).add_to(distance_layer)
+    distance_layer.add_to(fmap)
+
+
+def _add_travel_time_areas(fmap: folium.Map, areas: gpd.GeoDataFrame) -> None:
+    """Add a toggleable layer for estimated driving-time accessibility."""
+    display = areas.copy()
+    travel_time_layer = folium.FeatureGroup(
+        name="Estimated driving-time accessibility",
+        show=False,
+    )
+    folium.GeoJson(
+        display,
+        style_function=lambda feature: {
+            "fillColor": ACCESSIBILITY_COLORS.get(
+                feature["properties"].get("travel_time_accessibility", "unknown"),
+                ACCESSIBILITY_COLORS["unknown"],
+            ),
+            "color": "#334155",
+            "weight": 0.7,
+            "fillOpacity": 0.62,
+        },
+        tooltip=folium.GeoJsonTooltip(
+            fields=["name", "travel_time_accessibility", "nearest_hospital_minutes"],
+            aliases=["Area", "Driving-time accessibility", "Estimated drive (min)"],
+            localize=True,
+            sticky=False,
+        ),
+    ).add_to(travel_time_layer)
+    travel_time_layer.add_to(fmap)
 
 
 def _add_hospitals(fmap: folium.Map, hospitals: gpd.GeoDataFrame) -> None:
