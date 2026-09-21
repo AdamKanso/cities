@@ -11,12 +11,12 @@ from accessibility_map.workflow import AnalysisResult, run_analysis
 
 
 CITIES = {
+    "Beirut": "Beirut, Lebanon",
     "Milan": "Milan, Italy",
     "Rome": "Rome, Italy",
     "Zurich": "Zurich, Switzerland",
     "Brussels": "Brussels, Belgium",
     "Paris": "Paris, France",
-    "Beirut": "Beirut, Lebanon",
 }
 
 
