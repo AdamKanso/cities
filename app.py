@@ -10,6 +10,15 @@ from accessibility_map.map import build_map
 from accessibility_map.workflow import AnalysisResult, run_analysis
 
 
+CITIES = {
+    "Milan": "Milan, Italy",
+    "Rome": "Rome, Italy",
+    "Zurich": "Zurich, Switzerland",
+    "Brussels": "Brussels, Belgium",
+    "Paris": "Paris, France",
+}
+
+
 st.set_page_config(
     page_title="Milan Hospital Accessibility",
     page_icon="M",
@@ -20,6 +29,7 @@ st.set_page_config(
 
 @st.cache_resource(show_spinner=False)
 def load_analysis(
+    place: str,
     distance_good: int,
     distance_medium: int,
     time_good: int,
@@ -27,7 +37,7 @@ def load_analysis(
 ) -> AnalysisResult:
     """Cache the expensive OSM download and routing calculation per setting set."""
     return run_analysis(
-        "Milan, Italy",
+        place,
         AccessibilityThresholds(good_m=distance_good, medium_m=distance_medium),
         TravelTimeThresholds(good_minutes=time_good, medium_minutes=time_medium),
     )
@@ -53,7 +63,7 @@ def main() -> None:
 
     with st.sidebar:
         st.header("Analysis settings")
-        st.text_input("City", value="Milan, Italy", disabled=True)
+        city_name = st.selectbox("City", list(CITIES))
         scenario = st.radio(
             "Destinations",
             ["Hospitals only", "Hospitals + clinics"],
@@ -80,11 +90,12 @@ def main() -> None:
         st.error("The medium driving-time threshold must be greater than the good threshold.")
         return
 
-    st.title("Milan Hospital Accessibility")
+    st.title(f"{city_name} Hospital Accessibility")
     st.caption("Residential grid analysis using OpenStreetMap road, hospital, clinic, and land-use data.")
 
     with st.spinner("Downloading OpenStreetMap data and calculating routes..."):
         result = load_analysis(
+            CITIES[city_name],
             distance_good,
             distance_medium,
             time_good,

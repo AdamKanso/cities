@@ -96,7 +96,7 @@ Run the local app:
 streamlit run app.py
 ```
 
-Open the local address shown in the terminal, normally `http://localhost:8501`. The app provides controls for hospitals versus hospitals plus clinics, map metric, and accessibility thresholds.
+Open the local address shown in the terminal, normally `http://localhost:8501`. The app provides selectable analyses for Milan, Rome, Zurich, Brussels, and Paris, plus controls for hospitals versus hospitals plus clinics, map metric, and accessibility thresholds. It downloads data only for the selected city.
 
 ## Output
 
