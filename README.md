@@ -29,6 +29,7 @@ Install dependencies:
 
 ```powershell
 python -m pip install -r requirements.txt
+python -m pip install -e .
 ```
 
 ## Step-by-Step Workflow
@@ -46,6 +47,7 @@ git remote add origin git@github.com:AdamKanso/Milano.git
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
+python -m pip install -e .
 ```
 
 3. Run the analysis for Milan.

@@ -3,6 +3,22 @@ name = "interactive-accessibility-map"
 version = "0.1.0"
 description = "Interactive hospital accessibility analysis using OpenStreetMap, GeoPandas, OSMnx, and Folium."
 requires-python = ">=3.10"
+dependencies = [
+    "geopandas>=0.14",
+    "osmnx>=1.9",
+    "folium>=0.16",
+    "shapely>=2.0",
+    "networkx>=3.2",
+    "numpy>=1.26",
+    "pandas>=2.2",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
