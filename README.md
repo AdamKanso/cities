@@ -43,7 +43,7 @@ python -m pip install -e .
 
 ```powershell
 git init
-git remote add origin git@github.com:AdamKanso/Milano.git
+git remote add origin git@github.com:AdamKanso/cities.git
 ```
 
 2. Install the Python packages.
