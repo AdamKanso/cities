@@ -2,7 +2,7 @@
 
 This project downloads OpenStreetMap data for a selected city, measures access from residential grid cells to hospitals, classifies areas as having good, medium, or poor accessibility, and exports an interactive Folium map.
 
-The default example city is Milan, Italy, but the command line interface accepts any city name that can be geocoded by OpenStreetMap.
+The default example city is Beirut, Lebanon, but the command line interface accepts any city name that can be geocoded by OpenStreetMap.
 
 ## Research Question
 
